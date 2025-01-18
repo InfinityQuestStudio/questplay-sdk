@@ -17,7 +17,7 @@ Include the SDK in your project by adding the following script tag:
 ```javascript
 <script src="https://cdn.jsdelivr.net/gh/InfinityQuestStudio/questplay-sdk@[version]/questplay-sdk.js"></script>
 ```
-The SDK will be available globally as window.QuestPlaySDK.
+The SDK will be available globally.
 
 
 ## Usage
