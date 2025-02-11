@@ -24,26 +24,26 @@ class QuestPlaySDK {
    * @param {string} gameConfig.containerId - The ID of the container where the game iframe will be embedded.
    * @param {string} gameConfig.iframeUrl - URL of the game iframe.
    * @param {string} gameConfig.userId - User ID associated with the game.
-   * @param {number} gameConfig.balance - Initial balance for the user.
+   * @param {number} gameConfig.getUserBalance - Async function that fetches the user's balance.
    * @param {function} [gameConfig.onError] - Callback function to handle errors.
    * @param {function} [gameConfig.onGameResult] - Callback function to handle game result.
    * @param {string} [gameConfig.locale="en-US"] - Locale for the game.
    * @param {string} [gameConfig.currency="USD"] - Currency for the game.
    * @param {function} [gameConfig.onGameLoad] - Callback to be triggered once the game iframe has loaded.
    */
-  addGame({
+  async addGame({
     gameId,
     containerId,
     iframeUrl,
     userId,
-    balance,
+    getUserBalance,
     onError,
     onGameResult,
     locale,
     currency,
     onGameLoad,
   }) {
-    // Validate and check if the game ID is valid and not already added
+    // Validate inputs
     if (!gameId || typeof gameId !== "string") {
       console.error("[QuestPlaySDK] Invalid or missing gameId.");
       return;
@@ -52,18 +52,27 @@ class QuestPlaySDK {
       console.warn(`[QuestPlaySDK] Game with ID "${gameId}" already exists.`);
       return;
     }
-
-    // Find the container element where the game iframe will be added
     const container = document.getElementById(containerId);
     if (!container) {
       console.error(`[QuestPlaySDK] Container with ID "${containerId}" not found.`);
       return;
     }
-
-    // Validate the iframe URL to ensure it's a valid HTTP URL
     if (!iframeUrl || !iframeUrl.startsWith("http")) {
       console.error("[QuestPlaySDK] Invalid iframe URL.");
       return;
+    }
+    if (typeof getUserBalance !== "function") {
+      console.error("[QuestPlaySDK] getUserBalance must be a function.");
+      return;
+    }
+
+    // Fetch the user's balance asynchronously
+    let balance;
+    try {
+      balance = await getUserBalance(userId);
+    } catch (error) {
+      console.error("[QuestPlaySDK] Failed to fetch user balance:", error);
+      balance = 0;
     }
 
     // Create the iframe and append it to the container
@@ -78,7 +87,6 @@ class QuestPlaySDK {
       iframe,
       iframeUrl,
       userId,
-      balance,
       locale: locale || this.defaultLocale,
       currency: currency || this.defaultCurrency,
       onError: onError || (() => {}),
@@ -89,7 +97,7 @@ class QuestPlaySDK {
     iframe.onload = () => {
       this.postMessage(gameId, {
         action: "setParentDomain",
-        domain: window.location.origin, // Inform the iframe of the parent domain
+        domain: window.location.origin,
       });
       this.postMessage(gameId, {
         action: "userDetails",
@@ -105,11 +113,8 @@ class QuestPlaySDK {
     window.addEventListener("message", this.handleMessage.bind(this, gameId));
   }
 
-  /**
-   * Removes a game from the SDK, deleting its instance and removing the iframe.
-   * 
-   * @param {string} gameId - The unique ID of the game to be removed.
-   */
+
+  // Removes a game from the SDK, deleting its instance and removing the iframe.
   removeGame(gameId) {
     const game = this.games[gameId];
     if (!game) {
@@ -155,24 +160,30 @@ class QuestPlaySDK {
       return;
     }
 
-    // Destructure the message data
-    const { action, data, message, locale, currency } = event.data;
+    const {
+      action,
+      data,
+      message,
+      locale,
+      currency
+    } = event.data;
 
     // Handle the game result action
     if (action === "gameResult") {
       game.onGameResult(data);
     }
 
-    // Handle updating the locale and currency for the game
     if (action === "updateLocaleAndCurrency") {
       if (locale) game.locale = locale;
       if (currency) game.currency = currency;
-      this.log(`Locale and currency updated for Game ID "${gameId}":`, { locale, currency });
+      this.log(`[QuestPlaySDK] Locale and currency updated for Game ID "${gameId}":`, {
+        locale,
+        currency
+      });
     }
 
-    // Handle error messages from the game
     if (action === "error") {
-      console.error(`Error from Game ID "${gameId}":`, message);
+      console.error(`[QuestPlaySDK] Error from Game ID "${gameId}":`, message);
       game.onError(message);
     }
   }
@@ -184,5 +195,4 @@ class QuestPlaySDK {
   }
 }
 
-// Export the SDK to the global window object
 window.QuestPlaySDK = QuestPlaySDK;

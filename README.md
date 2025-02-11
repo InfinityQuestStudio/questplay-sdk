@@ -28,22 +28,22 @@ To initialize the SDK on your website, use the init method with the required con
   const sdk = new QuestPlaySDK(true);
 
   const gameConfig = {
-      gameId: 'game_id', (string, required)
-      iframeUrl: 'game_url', (string, required)
-      userId: 'user_id', (string, required)
-      balance: balance, (number, required)
-      locale: 'en-US', (string, optional - default en-US)
-      currency: 'TZS', (string, optional - default TZS)
-      containerId: 'game_container_id', (string, required)
-      onError: (errorMessage) => {
-        console.error('[QuestPlaySDK] Game error:', errorMessage);
+     gameId: "game123",
+      containerId: "gameContainer",
+      iframeUrl: "http://example.com/game",
+      userId: "user789",
+      getUserBalance: async (userId) => {
+        try {
+          const response = await $apis.users.getPlayer({ userId });
+          return response.balance;
+        } catch (error) {
+          console.error("Error fetching balance:", error);
+          return 0;
+        }
       },
-      onGameResult: (result) => {
-        console.log('[QuestPlaySDK] Game result:', result);
-      },
-      onGameLoad: () => {
-        console.log('[QuestPlaySDK] Game loaded successfully');
-      }
+      onGameResult: (result) => console.log("Game result:", result),
+      onError: (error) => console.error("Game error:", error),
+      onGameLoad: () => console.log("Game loaded!"),
   };
 
   sdk.addGame(gameConfig);
