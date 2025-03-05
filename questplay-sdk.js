@@ -20,6 +20,7 @@ class QuestPlaySDK {
    * This will embed the game in an iframe and provide communication hooks.
    * 
    * @param {Object} gameConfig - The configuration object for the game.
+   * @param {string} gameConfig.tenantName - The name of the registered tenant.
    * @param {string} gameConfig.gameId - Unique ID for the game.
    * @param {string} gameConfig.containerId - The ID of the container where the game iframe will be embedded.
    * @param {string} gameConfig.iframeUrl - URL of the game iframe.
@@ -32,6 +33,7 @@ class QuestPlaySDK {
    * @param {function} [gameConfig.onGameLoad] - Callback to be triggered once the game iframe has loaded.
    */
   async addGame({
+    tenantName,
     gameId,
     containerId,
     iframeUrl,
@@ -44,6 +46,10 @@ class QuestPlaySDK {
     onGameLoad,
   }) {
     // Validate inputs
+    if (!tenantName || typeof tenantName !== "string") {
+      console.error("[QuestPlaySDK] Invalid or missing TenantName.");
+      return;
+    }
     if (!gameId || typeof gameId !== "string") {
       console.error("[QuestPlaySDK] Invalid or missing gameId.");
       return;
@@ -86,11 +92,12 @@ class QuestPlaySDK {
     this.games[gameId] = {
       iframe,
       iframeUrl,
+      tenantName,
       userId,
       locale: locale || this.defaultLocale,
       currency: currency || this.defaultCurrency,
-      onError: onError || (() => {}),
-      onGameResult: onGameResult || (() => {}),
+      onError: onError || (() => { }),
+      onGameResult: onGameResult || (() => { }),
     };
 
     // Send user details to the game iframe once it has loaded
@@ -101,6 +108,7 @@ class QuestPlaySDK {
       });
       this.postMessage(gameId, {
         action: "userDetails",
+        tenantName,
         userId,
         balance,
         locale: this.games[gameId].locale,
