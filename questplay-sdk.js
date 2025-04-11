@@ -131,7 +131,7 @@ class QuestPlaySDK {
     }
     game.iframe.parentElement.removeChild(game.iframe);
     delete this.games[gameId];
-    console.log(`[QuestPlaySDK] Game with ID "${gameId}" removed.`);
+    // console.log(`[QuestPlaySDK] Game with ID "${gameId}" removed.`);
     window.removeEventListener("message", this.handleMessage.bind(this, gameId));
   }
 
@@ -146,7 +146,7 @@ class QuestPlaySDK {
     if (game && game.iframe && game.iframe.contentWindow) {
       // Send a message to the game's iframe window
       game.iframe.contentWindow.postMessage(data, game.iframeUrl);
-      this.log(`Message sent to Game ID "${gameId}":`, data);
+      this.log(`Message sent to Game ID "${gameId}":`);
     }
   }
 
@@ -161,12 +161,6 @@ class QuestPlaySDK {
     const game = this.games[gameId];
     if (!game) return;
 
-    // Ensure the message comes from the correct origin (security check)
-    // const allowedOrigin = new URL(game.iframeUrl).origin;
-    // if (event.origin !== allowedOrigin) {
-    //   console.warn(`[QuestPlaySDK] Ignoring message from unauthorized origin: ${event.origin}`);
-    //   return;
-    // }
 
     const {
       action,
