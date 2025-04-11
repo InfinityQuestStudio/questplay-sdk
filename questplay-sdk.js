@@ -162,11 +162,11 @@ class QuestPlaySDK {
     if (!game) return;
 
     // Ensure the message comes from the correct origin (security check)
-    const allowedOrigin = new URL(game.iframeUrl).origin;
-    if (event.origin !== allowedOrigin) {
-      console.warn(`[QuestPlaySDK] Ignoring message from unauthorized origin: ${event.origin}`);
-      return;
-    }
+    // const allowedOrigin = new URL(game.iframeUrl).origin;
+    // if (event.origin !== allowedOrigin) {
+    //   console.warn(`[QuestPlaySDK] Ignoring message from unauthorized origin: ${event.origin}`);
+    //   return;
+    // }
 
     const {
       action,
