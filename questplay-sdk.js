@@ -30,6 +30,7 @@ class QuestPlaySDK {
    * @param {function} [gameConfig.onGameResult] - Callback function to handle game result.
    * @param {string} [gameConfig.locale="en-US"] - Locale for the game.
    * @param {string} [gameConfig.currency="USD"] - Currency for the game.
+   * @param {string} gameConfig.callbackUrl - Tenant callback URL
    * @param {function} [gameConfig.onGameLoad] - Callback to be triggered once the game iframe has loaded.
    */
   async addGame({
@@ -43,6 +44,7 @@ class QuestPlaySDK {
     onGameResult,
     locale,
     currency,
+    callbackUrl,
     onGameLoad,
   }) {
     // Validate inputs
@@ -56,6 +58,10 @@ class QuestPlaySDK {
     }
     if (this.games[gameId]) {
       console.warn(`[QuestPlaySDK] Game with ID "${gameId}" already exists.`);
+      return;
+    }
+    if (!callbackUrl || typeof callbackUrl !== "string") {
+      console.error("[QuestPlaySDK] Invalid or missing Callback URL.");
       return;
     }
     const container = document.getElementById(containerId);
@@ -94,6 +100,7 @@ class QuestPlaySDK {
       iframeUrl,
       tenantName,
       userId,
+      callbackUrl,
       locale: locale || this.defaultLocale,
       currency: currency || this.defaultCurrency,
       onError: onError || (() => { }),
@@ -110,6 +117,7 @@ class QuestPlaySDK {
         action: "userDetails",
         tenantName,
         userId,
+        callbackUrl,
         balance,
         locale: this.games[gameId].locale,
         currency: this.games[gameId].currency,
@@ -167,7 +175,7 @@ class QuestPlaySDK {
       data,
       message,
       locale,
-      currency
+      currency,
     } = event.data;
 
     // Handle the game result action
