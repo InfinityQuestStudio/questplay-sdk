@@ -20,7 +20,7 @@ class QuestPlaySDK {
    * This will embed the game in an iframe and provide communication hooks.
    * 
    * @param {Object} gameConfig - The configuration object for the game.
-   * @param {string} gameConfig.tenantName - The name of the registered tenant.
+   * @param {string} gameConfig.operatorName - The name of the registered operator.
    * @param {string} gameConfig.gameId - Unique ID for the game.
    * @param {string} gameConfig.containerId - The ID of the container where the game iframe will be embedded.
    * @param {string} gameConfig.iframeUrl - URL of the game iframe.
@@ -30,11 +30,11 @@ class QuestPlaySDK {
    * @param {function} [gameConfig.onGameResult] - Callback function to handle game result.
    * @param {string} [gameConfig.locale="en-US"] - Locale for the game.
    * @param {string} [gameConfig.currency="USD"] - Currency for the game.
-   * @param {string} gameConfig.callbackUrl - Tenant callback URL
+   * @param {string} gameConfig.callbackUrl - Operator callback URL
    * @param {function} [gameConfig.onGameLoad] - Callback to be triggered once the game iframe has loaded.
    */
   async addGame({
-    tenantName,
+    operatorName,
     gameId,
     containerId,
     iframeUrl,
@@ -48,8 +48,8 @@ class QuestPlaySDK {
     onGameLoad,
   }) {
     // Validate inputs
-    if (!tenantName || typeof tenantName !== "string") {
-      console.error("[QuestPlaySDK] Invalid or missing TenantName.");
+    if (!operatorName || typeof operatorName !== "string") {
+      console.error("[QuestPlaySDK] Invalid or missing operatorName.");
       return;
     }
     if (!gameId || typeof gameId !== "string") {
@@ -91,14 +91,14 @@ class QuestPlaySDK {
     const iframe = document.createElement("iframe");
     iframe.src = iframeUrl;
     iframe.width = "100%";
-    iframe.height = "600";
+    iframe.height = "100%";
     container.appendChild(iframe);
 
     // Store game-specific details and configuration in the SDK
     this.games[gameId] = {
       iframe,
       iframeUrl,
-      tenantName,
+      operatorName,
       userId,
       callbackUrl,
       locale: locale || this.defaultLocale,
@@ -115,7 +115,7 @@ class QuestPlaySDK {
       });
       this.postMessage(gameId, {
         action: "userDetails",
-        tenantName,
+        operatorName,
         userId,
         callbackUrl,
         balance,

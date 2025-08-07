@@ -28,11 +28,12 @@ To initialize the SDK on your website, use the init method with the required con
   const sdk = new QuestPlaySDK(true);
 
   const gameConfig = {
-      tenantName: "tenant123",
+      operatorName: "operator123",
       gameId: "game123",
       containerId: "gameContainer",
-      iframeUrl: "http://example.com/game",
+      iframeUrl: "https://example.com/game",
       userId: "user789",
+      callbackUrl: "https://your-callback-url.com",
       getUserBalance: async (userId) => {
         try {
           const response = await $apis.users.getPlayer({ userId });
