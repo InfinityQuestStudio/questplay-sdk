@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuestPlay Demo</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #000;
+    }
+
+    #gameContainer {
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="gameContainer"></div>
+
+  <!-- Load QuestPlay SDK -->
+  <script src="https://cdn.jsdelivr.net/gh/InfinityQuestStudio/questplay-sdk@latest/questplay-sdk.js"></script>
+
+  <script>
+    const sdk = new QuestPlaySDK(true);
+
+    const gameConfig = {
+      tenantName: "tenant123",
+      gameId: "game123",
+      containerId: "gameContainer",
+      iframeUrl: "https://game-url.com",
+      userId: "user789",
+      callbackUrl: "https://your-callback-url.com",
+      getUserBalance: async (userId) => {
+        console.log(`Fetching balance for user: ${userId}`);
+        return 1000; // Example static balance
+      },
+      onGameResult: (result) => console.log("Game result:", result),
+      onError: (error) => console.error("Game error:", error),
+      onGameLoad: () => console.log("Game loaded!")
+    };
+
+    sdk.addGame(gameConfig);
+  </script>
+
+</body>
+
+</html>
