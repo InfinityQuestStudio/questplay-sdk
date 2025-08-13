@@ -20,7 +20,7 @@ class QuestPlaySDK {
    * This will embed the game in an iframe and provide communication hooks.
    * 
    * @param {Object} gameConfig - The configuration object for the game.
-   * @param {string} gameConfig.operatorName - The name of the registered operator.
+   * @param {string} gameConfig.tenantName - The name of the registered operator.
    * @param {string} gameConfig.gameId - Unique ID for the game.
    * @param {string} gameConfig.containerId - The ID of the container where the game iframe will be embedded.
    * @param {string} gameConfig.iframeUrl - URL of the game iframe.
@@ -34,7 +34,7 @@ class QuestPlaySDK {
    * @param {function} [gameConfig.onGameLoad] - Callback to be triggered once the game iframe has loaded.
    */
   async addGame({
-    operatorName,
+    tenantName,
     gameId,
     containerId,
     iframeUrl,
@@ -48,8 +48,8 @@ class QuestPlaySDK {
     onGameLoad,
   }) {
     // Validate inputs
-    if (!operatorName || typeof operatorName !== "string") {
-      console.error("[QuestPlaySDK] Invalid or missing operatorName.");
+    if (!tenantName || typeof tenantName !== "string") {
+      console.error("[QuestPlaySDK] Invalid or missing tenantName.");
       return;
     }
     if (!gameId || typeof gameId !== "string") {
@@ -98,7 +98,7 @@ class QuestPlaySDK {
     this.games[gameId] = {
       iframe,
       iframeUrl,
-      operatorName,
+      tenantName,
       userId,
       callbackUrl,
       locale: locale || this.defaultLocale,
@@ -115,7 +115,7 @@ class QuestPlaySDK {
       });
       this.postMessage(gameId, {
         action: "userDetails",
-        operatorName,
+        tenantName,
         userId,
         callbackUrl,
         balance,

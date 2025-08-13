@@ -28,7 +28,7 @@ To initialize the SDK on your website, use the init method with the required con
   const sdk = new QuestPlaySDK(true);
 
   const gameConfig = {
-      operatorName: "operator123",
+      tenantName: "tenant123",
       gameId: "game123",
       containerId: "gameContainer",
       iframeUrl: "https://example.com/game",
