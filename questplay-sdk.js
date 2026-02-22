@@ -1,207 +1,226 @@
-/**
- * Class representing QuestPlaySDK
- * This SDK manages multiple game instances embedded in iframes and provides methods
- * to interact with the games and manage their configurations.
- */
 class QuestPlaySDK {
-  /**
-   * Creates an instance of SDK.
-   * @param {boolean} [debug=false] - Whether to enable debug logging.
-   */
-  constructor(debug = false) {
+  constructor(options = {}) {
+    this.debug = !!options.debug;
+    this.inspectorEnabled = !!options.inspector;
+
     this.games = {};
     this.defaultLocale = "en-US";
     this.defaultCurrency = "TZS";
-    this.debug = debug;
+
+    this._boundMessageHandler = this._handleMessage.bind(this);
+    window.addEventListener("message", this._boundMessageHandler);
+
+    if (this.inspectorEnabled) {
+      this._initInspector();
+    }
   }
 
-  /**
-   * Adds a new game instance to the SDK.
-   * This will embed the game in an iframe and provide communication hooks.
-   * 
-   * @param {Object} gameConfig - The configuration object for the game.
-   * @param {string} gameConfig.tenantName - The name of the registered operator.
-   * @param {string} gameConfig.gameId - Unique ID for the game.
-   * @param {string} gameConfig.containerId - The ID of the container where the game iframe will be embedded.
-   * @param {string} gameConfig.iframeUrl - URL of the game iframe.
-   * @param {string} gameConfig.userId - User ID associated with the game.
-   * @param {number} gameConfig.getUserBalance - Async function that fetches the user's balance.
-   * @param {function} [gameConfig.onError] - Callback function to handle errors.
-   * @param {function} [gameConfig.onGameResult] - Callback function to handle game result.
-   * @param {string} [gameConfig.locale="en-US"] - Locale for the game.
-   * @param {string} [gameConfig.currency="USD"] - Currency for the game.
-   * @param {string} gameConfig.callbackUrl - Operator callback URL
-   * @param {function} [gameConfig.onGameLoad] - Callback to be triggered once the game iframe has loaded.
-   */
-  async addGame({
-    tenantName,
-    gameId,
-    containerId,
-    iframeUrl,
-    userId,
-    getUserBalance,
-    onError,
-    onGameResult,
-    locale,
-    currency,
-    callbackUrl,
-    onGameLoad,
-  }) {
-    // Validate inputs
-    if (!tenantName || typeof tenantName !== "string") {
-      console.error("[QuestPlaySDK] Invalid or missing tenantName.");
-      return;
-    }
-    if (!gameId || typeof gameId !== "string") {
-      console.error("[QuestPlaySDK] Invalid or missing gameId.");
-      return;
-    }
-    if (this.games[gameId]) {
-      console.warn(`[QuestPlaySDK] Game with ID "${gameId}" already exists.`);
-      return;
-    }
-    if (!callbackUrl || typeof callbackUrl !== "string") {
-      console.error("[QuestPlaySDK] Invalid or missing Callback URL.");
-      return;
-    }
-    const container = document.getElementById(containerId);
-    if (!container) {
-      console.error(`[QuestPlaySDK] Container with ID "${containerId}" not found.`);
-      return;
-    }
-    if (!iframeUrl || !iframeUrl.startsWith("http")) {
-      console.error("[QuestPlaySDK] Invalid iframe URL.");
-      return;
-    }
-    if (typeof getUserBalance !== "function") {
-      console.error("[QuestPlaySDK] getUserBalance must be a function.");
-      return;
+  /* -------------------------------------------------- */
+  /*                     ADD GAME                      */
+  /* -------------------------------------------------- */
+
+  async addGame(config) {
+    const {
+      tenantName,
+      gameId,
+      containerId,
+      iframeUrl,
+      userId,
+      getUserBalance,
+      onError,
+      onGameResult,
+      locale,
+      currency,
+      callbackUrl,
+      onGameLoad,
+    } = config || {};
+
+    if (!tenantName || !gameId || !containerId || !iframeUrl || !callbackUrl) {
+      return this._fail("Missing required game configuration");
     }
 
-    // Fetch the user's balance asynchronously
-    let balance;
+    if (this.games[gameId]) {
+      return this._fail(`Game ${gameId} already exists`);
+    }
+
+    const container = document.getElementById(containerId);
+    if (!container) return this._fail(`Container ${containerId} not found`);
+
+    let balance = 0;
     try {
       balance = await getUserBalance(userId);
-    } catch (error) {
-      console.error("[QuestPlaySDK] Failed to fetch user balance:", error);
+    } catch {
       balance = 0;
     }
 
-    // Create the iframe and append it to the container
     const iframe = document.createElement("iframe");
     iframe.src = iframeUrl;
-    iframe.width = "100%";
-    iframe.height = "100%";
+    iframe.style.width = "100%";
+    iframe.style.height = "100%";
+    iframe.style.border = "0";
     container.appendChild(iframe);
 
-    // Store game-specific details and configuration in the SDK
     this.games[gameId] = {
       iframe,
       iframeUrl,
       tenantName,
+      gameId,
       userId,
       callbackUrl,
       locale: locale || this.defaultLocale,
       currency: currency || this.defaultCurrency,
-      onError: onError || (() => { }),
-      onGameResult: onGameResult || (() => { }),
+      balance,
+      onError: onError || (() => {}),
+      onGameResult: onGameResult || (() => {}),
+      ready: false,
     };
 
-    // Send user details to the game iframe once it has loaded
+    this._inspector?.addGame(gameId);
+
     iframe.onload = () => {
-      this.postMessage(gameId, {
-        action: "setParentDomain",
-        domain: window.location.origin,
-      });
-      this.postMessage(gameId, {
-        action: "userDetails",
+      this._send(gameId, "setParentDomain", window.location.origin);
+      this._send(gameId, "userDetails", {
         tenantName,
+        gameId,
         userId,
-        callbackUrl,
         balance,
+        callbackUrl,
         locale: this.games[gameId].locale,
         currency: this.games[gameId].currency,
       });
-      if (onGameLoad) onGameLoad();
+
+      onGameLoad?.();
     };
-
-    // Listen for messages from the iframe and handle them
-    window.addEventListener("message", this.handleMessage.bind(this, gameId));
   }
 
+  /* -------------------------------------------------- */
+  /*                   POST MESSAGE                    */
+  /* -------------------------------------------------- */
 
-  // Removes a game from the SDK, deleting its instance and removing the iframe.
-  removeGame(gameId) {
+  _send(gameId, action, data) {
     const game = this.games[gameId];
-    if (!game) {
-      console.warn(`[QuestPlaySDK] Game with ID "${gameId}" does not exist.`);
-      return;
-    }
-    game.iframe.parentElement.removeChild(game.iframe);
-    delete this.games[gameId];
-    // console.log(`[QuestPlaySDK] Game with ID "${gameId}" removed.`);
-    window.removeEventListener("message", this.handleMessage.bind(this, gameId));
+    if (!game?.iframe?.contentWindow) return;
+
+    const payload = { action, data };
+    game.iframe.contentWindow.postMessage(payload, "*");
+
+    this._log(`→ ${action}`, payload);
+    this._inspector?.log(gameId, "SEND", action, data);
   }
 
-  /**
-   * Sends a message to a specific game iframe.
-   * 
-   * @param {string} gameId - The unique ID of the game to send the message to.
-   * @param {Object} data - The data to be sent in the message.
-   */
-  postMessage(gameId, data) {
-    const game = this.games[gameId];
-    if (game && game.iframe && game.iframe.contentWindow) {
-      // Send a message to the game's iframe window
-      game.iframe.contentWindow.postMessage(data, game.iframeUrl);
-      this.log(`Message sent to Game ID "${gameId}":`);
-    }
-  }
+  _handleMessage(event) {
+    const { action, data, message } = event.data || {};
+    if (!action) return;
 
-  /**
-   * Handles messages received from the game iframe.
-   * Processes actions like game results, updates to locale and currency, and error messages.
-   * 
-   * @param {string} gameId - The unique ID of the game the message is associated with.
-   * @param {MessageEvent} event - The message event from the iframe.
-   */
-  handleMessage(gameId, event) {
-    const game = this.games[gameId];
+    const game = Object.values(this.games).find(
+      g => g.iframe.contentWindow === event.source
+    );
     if (!game) return;
 
+    this._log(`← ${action}`, data);
+    this._inspector?.log(game.gameId, "RECV", action, data);
 
-    const {
-      action,
-      data,
-      message,
-      locale,
-      currency,
-    } = event.data;
+    switch (action) {
+      case "gameLoaded":
+        game.ready = true;
+        break;
 
-    // Handle the game result action
-    if (action === "gameResult") {
-      game.onGameResult(data);
-    }
+      case "gameResult":
+        game.onGameResult(data);
+        break;
 
-    if (action === "updateLocaleAndCurrency") {
-      if (locale) game.locale = locale;
-      if (currency) game.currency = currency;
-      this.log(`[QuestPlaySDK] Locale and currency updated for Game ID "${gameId}":`, {
-        locale,
-        currency
-      });
-    }
-
-    if (action === "error") {
-      console.error(`[QuestPlaySDK] Error from Game ID "${gameId}":`, message);
-      game.onError(message);
+      case "error":
+        game.onError(message);
+        this._inspector?.error(game.gameId, message);
+        break;
     }
   }
 
-  log(message, data) {
+  /* -------------------------------------------------- */
+  /*                  DEV INSPECTOR                    */
+  /* -------------------------------------------------- */
+
+  _initInspector() {
+    const panel = document.createElement("div");
+    panel.style.cssText = `
+      position:fixed;
+      bottom:10px;
+      right:10px;
+      width:340px;
+      max-height:70vh;
+      background:#0f172a;
+      color:#e5e7eb;
+      font-family:monospace;
+      font-size:12px;
+      border-radius:8px;
+      box-shadow:0 10px 30px rgba(0,0,0,.4);
+      overflow:hidden;
+      z-index:999999;
+    `;
+
+    panel.innerHTML = `
+      <div style="padding:8px;background:#020617;font-weight:bold">
+        QuestPlay SDK Inspector
+      </div>
+      <div id="qp-games" style="padding:8px;overflow:auto"></div>
+    `;
+
+    document.body.appendChild(panel);
+
+    this._inspector = {
+      games: {},
+      addGame: (id) => {
+        this._inspector.games[id] = { logs: [] };
+        this._renderInspector();
+      },
+      log: (id, dir, action, data) => {
+        this._inspector.games[id]?.logs.unshift({
+          time: new Date().toLocaleTimeString(),
+          dir,
+          action,
+          data
+        });
+        this._renderInspector();
+      },
+      error: (id, msg) => {
+        this._inspector.games[id]?.logs.unshift({
+          time: new Date().toLocaleTimeString(),
+          dir: "ERR",
+          action: msg
+        });
+        this._renderInspector();
+      }
+    };
+  }
+
+  _renderInspector() {
+    const root = document.getElementById("qp-games");
+    if (!root) return;
+
+    root.innerHTML = Object.entries(this._inspector.games).map(
+      ([id, g]) => `
+        <div style="margin-bottom:10px">
+          <div style="font-weight:bold">${id}</div>
+          ${g.logs.slice(0, 5).map(l => `
+            <div>
+              ${l.time} ${l.dir} <b>${l.action}</b>
+            </div>
+          `).join("")}
+        </div>
+      `
+    ).join("");
+  }
+
+  /* -------------------------------------------------- */
+
+  _log(msg, data) {
     if (this.debug) {
-      console.log(`[QuestPlaySDK] ${message}`, data || "");
+      console.log(`[QuestPlaySDK] ${msg}`, data || "");
     }
+  }
+
+  _fail(msg) {
+    console.error(`[QuestPlaySDK] ${msg}`);
   }
 }
 

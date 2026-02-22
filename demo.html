@@ -37,7 +37,7 @@
   <script src="https://cdn.jsdelivr.net/gh/InfinityQuestStudio/questplay-sdk@latest/questplay-sdk.js"></script>
 
   <script>
-    const sdk = new QuestPlaySDK(true);
+    const sdk = new QuestPlaySDK({ debug: true, inspector: true });
 
     const gameConfig = {
       tenantName: "Two Founder",
