@@ -25,7 +25,7 @@ The SDK will be available globally.
 To initialize the SDK on your website, use the init method with the required configuration options:
 
 ```javascript
-  const sdk = new QuestPlaySDK(true);
+  const sdk = new QuestPlaySDK({ debug: true, inspector: true });
 
   const gameConfig = {
       tenantName: "tenant123",
